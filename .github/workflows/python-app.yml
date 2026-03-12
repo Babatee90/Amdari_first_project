@@ -1,7 +1,7 @@
 # This workflow will install Python dependencies, run tests and lint with a single version of Python
 # For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python
 
-name: Amdari First Project CI/CD
+name: Techflow Pipeline
 
 on:
   push:
@@ -14,7 +14,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -31,35 +31,47 @@ jobs:
           pytest test_app.py -v
 
 
-  build-and-push:
+  build:
     needs: test
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Login to DockerHub
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build Docker image
+      - name: Build Docker Image
         run: |
           docker build -t ${{ secrets.DOCKER_USERNAME }}/amdari_first_project:latest .
 
-      - name: Push Docker image
+
+  push:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Login to DockerHub
+        uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Push Image
         run: |
           docker push ${{ secrets.DOCKER_USERNAME }}/amdari_first_project:latest
 
 
   deploy:
-    needs: build-and-push
+    needs: push
     runs-on: ubuntu-latest
 
     steps:
-      - name: Deploy container to EC2
+      - name: Deploy to EC2
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.EC2_HOST }}
